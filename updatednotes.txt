@@ -1,0 +1,100 @@
+PrevostGO Project Status
+What's Working:
+
+Frontend is running on localhost:3000 (React/Vite)
+Frontend UI displays correctly but shows no coaches
+SQLite database exists with 391 coaches (should be 700+)
+
+Current Issues:
+
+Backend won't start due to Python 3.13 compatibility issues:
+
+Fixed Pydantic (updated to 2.9.2)
+Fixed SQLAlchemy (updated to 2.0.35)
+Still has issues with lxml/aiohttp build failures on Windows
+
+
+Database is missing coaches (391 instead of 700+)
+
+Key Files:
+
+Best scraper: backend/scraper_final_v2.py
+Database: backend/prevostgo.db
+Integrated scraper: backend/app/services/scraper.py (modified to use requests instead of aiohttp)
+
+Next Steps:
+
+Get backend running (may need to install Microsoft C++ Build Tools for lxml)
+Run scraper_final_v2.py to populate all 700+ coaches
+Backend has a /api/inventory/scrape endpoint to trigger scraping via API
+
+Environment:
+
+Windows with Python 3.13
+Virtual environment at C:\Users\tmcha\Dev\prevostgo\venv
+Frontend uses npm/Node.js
+
+The project structure is correct, just need to resolve the Python dependencies and populate the full database.
+
+I then had ChatGPT look into it. Reply:
+
+It turned out nothing was actually “wrong” with your HeroSearch component or your HomePage—your layout was never rendering any of your routed pages. In React-Router v6, nested routes don’t get passed into your <Layout> as children; instead you have to render them via an <Outlet/>.
+
+What’s happening now
+Your App.jsx defines:
+<Routes>
+  <Route path="/" element={<Layout />}>
+    <Route index element={<HomePage />} />
+    …
+  </Route>
+</Routes>
+
+But your Layout.jsx never imports or uses <Outlet/>. You have:
+const Layout = ({ children }) => (
+  …
+  <div className="flex-grow">
+    {children}
+  </div>
+  …
+)
+
+React-Router doesn’t hand you a children prop there, so {children} is always empty ⇒ your <HomePage/> (with its HeroSearch/search bar) never shows up.
+
+he fix
+Import Outlet from react-router-dom
+
+Replace your {children} placeholder with <Outlet />
+
+(Optionally) drop the { children } parameter since you’re no longer using it.
+
+Here’s a minimal diff you can apply to src/components/Layout.jsx:
+
+-import React, { useState } from 'react';
+-import { Link, useLocation } from 'react-router-dom';
++import React, { useState } from 'react';
++import { Link, useLocation, Outlet } from 'react-router-dom';
+
+…
+
+-const Layout = ({ children }) => {
++const Layout = () => {
+  return (
+    <div className="bg-[#0a0a0a] min-h-screen font-sans text-white relative">
+      …
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <Header />
+-       <div className="flex-grow">
+-         {children}
+-       </div>
++       <div className="flex-grow">
++         <Outlet />
++       </div>
+        <Footer />
+      </div>
+    </div>
+  );
+};
+
+export default Layout;
+
+After that, <HomePage /> (and its <HeroSearch/>) will be injected into your layout at the <Outlet/> spot, and your search bar will reappear.

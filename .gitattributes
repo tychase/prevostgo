@@ -1,0 +1,26 @@
+# Handle line endings automatically
+* text=auto
+
+# Explicitly declare text files
+*.py text
+*.js text
+*.jsx text
+*.json text
+*.md text
+*.txt text
+*.html text
+*.css text
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.db binary
+*.sqlite binary
+*.xlsx binary
+*.xls binary

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PrevostGO API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f0f0f0; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>PrevostGO API Connection Test</h1>
+    
+    <div>
+        <button onclick="testHealth()">Test Health Endpoint</button>
+        <button onclick="testInventory()">Test Inventory Endpoint</button>
+        <button onclick="testCORS()">Test CORS</button>
+        <button onclick="testSearch()">Test Search</button>
+    </div>
+    
+    <div id="result"></div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+        
+        function showResult(success, message, data = null) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <h3 class="${success ? 'success' : 'error'}">${message}</h3>
+                ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+            `;
+        }
+        
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                showResult(true, 'Health Check Successful!', data);
+            } catch (error) {
+                showResult(false, `Health Check Failed: ${error.message}`);
+            }
+        }
+        
+        async function testInventory() {
+            try {
+                const response = await fetch(`${API_URL}/inventory?limit=5`);
+                const data = await response.json();
+                showResult(true, `Inventory Endpoint Working! Found ${data.total} coaches`, data);
+            } catch (error) {
+                showResult(false, `Inventory Test Failed: ${error.message}`);
+            }
+        }
+        
+        async function testCORS() {
+            try {
+                const response = await fetch(`${API_URL}/test`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const data = await response.json();
+                showResult(true, 'CORS Test Successful!', data);
+            } catch (error) {
+                showResult(false, `CORS Test Failed: ${error.message}`);
+            }
+        }
+        
+        async function testSearch() {
+            try {
+                const response = await fetch(`${API_URL}/inventory?search=marathon&limit=5`);
+                const data = await response.json();
+                showResult(true, `Search Test Successful! Found ${data.coaches?.length || 0} coaches`, data);
+            } catch (error) {
+                showResult(false, `Search Test Failed: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

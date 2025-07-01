@@ -1,0 +1,29 @@
+# PrevostGO Backend - Minimal Requirements for Python 3.13
+# Avoids all packages that require Rust compilation
+
+# Core
+fastapi==0.109.0
+uvicorn==0.27.0
+python-multipart==0.0.6
+
+# Database - using standard sqlite3 (built-in)
+sqlalchemy==2.0.25
+
+# Validation - using older versions without Rust
+pydantic==1.10.13  # Last version before Rust dependency
+email-validator==1.3.1
+python-dotenv==1.0.0
+
+# Scraping - using synchronous libraries only
+requests==2.31.0
+beautifulsoup4==4.12.3
+# Skip aiohttp - it requires Rust
+# Skip lxml - use html.parser instead
+
+# Utils
+python-dateutil==2.8.2
+
+# Development
+pytest==7.4.4
+# Skip pytest-asyncio for now
+httpx==0.26.0
