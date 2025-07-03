@@ -43,9 +43,10 @@ app = FastAPI(
 
 # Configure CORS
 # Get allowed origins from environment variable
-allowed_origins = os.getenv("CORS_ORIGINS", "*").split(",")
-if allowed_origins == ["*"]:
+allowed_origins = os.getenv("CORS_ORIGINS", "https://prevostgo.com,https://www.prevostgo.com,http://localhost:3000").split(",")
+if "*" in allowed_origins:
     print("WARNING: CORS is configured to allow all origins. Update CORS_ORIGINS in production.")
+print(f"CORS allowed origins: {allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,
