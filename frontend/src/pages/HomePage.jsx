@@ -15,6 +15,13 @@ const HomePage = () => {
     const [searchApplied, setSearchApplied] = useState(false);
     const [totalCoaches, setTotalCoaches] = useState(0);
 
+    // Debug info at the top of the page (temporary)
+    const debugInfo = {
+        VITE_API_URL: import.meta.env.VITE_API_URL,
+        MODE: import.meta.env.MODE,
+        PROD: import.meta.env.PROD,
+    };
+
     // Fetch initial coaches
     useEffect(() => {
         fetchCoaches();
@@ -67,6 +74,13 @@ const HomePage = () => {
 
     return (
         <div className="w-full">
+            {/* Temporary Debug Info */}
+            <div className="bg-yellow-600 text-black p-2 text-xs">
+                Debug: VITE_API_URL = {import.meta.env.VITE_API_URL || 'NOT SET'} | 
+                MODE = {import.meta.env.MODE} | 
+                PROD = {String(import.meta.env.PROD)}
+            </div>
+
             {/* Hero Section */}
             <div className="relative flex items-center justify-center min-h-[70vh] md:min-h-[80vh] w-full overflow-hidden p-4">
                 <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/80 to-[#0a0a0a] z-0"></div>

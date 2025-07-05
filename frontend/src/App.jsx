@@ -8,6 +8,7 @@ import ContactPage from './pages/ContactPage'
 import SearchTest from './components/SearchTest'
 import ImageDiagnostic from './components/ImageDiagnostic'
 import CoachDebugTest from './components/CoachDebugTest'
+import DebugPage from './pages/DebugPage'
 
 function App() {
   // Debug: Log API URL on app load
@@ -25,6 +26,7 @@ function App() {
         <Route path="test" element={<SearchTest />} />
         <Route path="image-test" element={<ImageDiagnostic />} />
         <Route path="debug-coach" element={<CoachDebugTest />} />
+        <Route path="debug" element={<DebugPage />} />
       </Route>
     </Routes>
   )
