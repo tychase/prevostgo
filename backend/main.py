@@ -44,18 +44,32 @@ app = FastAPI(
 # Configure CORS
 # Get allowed origins from environment variable
 allowed_origins = os.getenv("CORS_ORIGINS", "https://prevostgo.com,https://www.prevostgo.com,http://prevostgo.com,http://www.prevostgo.com,http://localhost:3000,http://localhost:5173").split(",")
-if "*" in allowed_origins:
-    print("WARNING: CORS is configured to allow all origins. Update CORS_ORIGINS in production.")
-print(f"CORS allowed origins: {allowed_origins}")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"]
-)
+# For development/preview deployments, we need to handle dynamic Vercel URLs
+# In production, set ALLOW_ALL_ORIGINS=false
+allow_all_origins = os.getenv("ALLOW_ALL_ORIGINS", "false").lower() == "true"
+
+if allow_all_origins or "*" in allowed_origins:
+    print("WARNING: CORS is configured to allow all origins.")
+    # Allow all origins for development
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"]
+    )
+else:
+    print(f"CORS allowed origins: {allowed_origins}")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"]
+    )
 
 # Include routers
 app.include_router(inventory.router, prefix="/api/inventory", tags=["inventory"])

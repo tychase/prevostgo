@@ -10,6 +10,10 @@ import ImageDiagnostic from './components/ImageDiagnostic'
 import CoachDebugTest from './components/CoachDebugTest'
 
 function App() {
+  // Debug: Log API URL on app load
+  console.log('App loaded with VITE_API_URL:', import.meta.env.VITE_API_URL);
+  console.log('All env vars:', import.meta.env);
+  
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
