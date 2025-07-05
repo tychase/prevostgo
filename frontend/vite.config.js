@@ -4,15 +4,31 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: '/', // Ensure base path is set correctly
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+        }
+      }
+    }
+  },
   server: {
     port: 3000,
     host: '0.0.0.0',
+    allowedHosts: ['.replit.dev', '.repl.co', 'localhost'],
     proxy: {
       '/api': {
-        target: process.env.REPLIT ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co:8000` : 'http://localhost:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
         ws: true,
+        // Remove the /api prefix when forwarding to backend
+        rewrite: (path) => path.replace(/^\/api/, ''),
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('proxy error', err);

@@ -1,0 +1,41 @@
+~/workspace$ cd frontend
+~/workspace/frontend$ && npm run dev -- --host 0.0.0.0 --port 3000
+bash: syntax error near unexpected token `&&'
+~/workspace/frontend$ npm run dev -- --host 0.0.0.0 --port 3000
+
+> prevostgo-frontend@1.0.0 dev
+> vite --host 0.0.0.0 --port 3000
+
+
+  VITE v7.0.0  ready in 173 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://172.31.128.51:3000/
+  ➜  press h + enter to show help
+Sending Request to the Target: GET /api/inventory?per_page=6&sort_by=price&sort_order=desc
+INFO:     10.82.0.247:0 - "GET /api/inventory?per_page=6&sort_by=price&sort_order=desc HTTP/1.1" 307 Temporary Redirect
+Received Response from the Target: 307 /api/inventory?per_page=6&sort_by=price&sort_order=desc
+Sending Request to the Target: GET /api/inventory?per_page=6&sort_by=price&sort_order=desc
+INFO:     10.82.3.63:0 - "GET /api/inventory?per_page=6&sort_by=price&sort_order=desc HTTP/1.1" 307 Temporary Redirect
+Received Response from the Target: 307 /api/inventory?per_page=6&sort_by=price&sort_order=desc
+Sending Request to the Target: GET /api/inventory?per_page=6&sort_by=price&sort_order=desc
+INFO:     10.82.2.150:0 - "GET /api/inventory?per_page=6&sort_by=price&sort_order=desc HTTP/1.1" 307 Temporary Redirect
+Received Response from the Target: 307 /api/inventory?per_page=6&sort_by=price&sort_order=desc
+Sending Request to the Target: GET /api/inventory?per_page=6&sort_by=price&sort_order=desc
+INFO:     10.82.2.150:0 - "GET /api/inventory?per_page=6&sort_by=price&sort_order=desc HTTP/1.1" 307 Temporary Redirect
+Received Response from the Target: 307 /api/inventory?per_page=6&sort_by=price&sort_order=desc
+INFO:     172.31.128.51:56554 - "GET / HTTP/1.1" 200 OK
+Sending Request to the Target: GET /api/inventory?per_page=6&sort_by=price&sort_order=desc
+INFO:     10.82.3.63:0 - "GET /api/inventory?per_page=6&sort_by=price&sort_order=desc HTTP/1.1" 307 Temporary Redirect
+Received Response from the Target: 307 /api/inventory?per_page=6&sort_by=price&sort_order=desc
+Sending Request to the Target: GET /api/inventory?per_page=6&sort_by=price&sort_order=desc
+INFO:     10.82.3.63:0 - "GET /api/inventory?per_page=6&sort_by=price&sort_order=desc HTTP/1.1" 307 Temporary Redirect
+Received Response from the Target: 307 /api/inventory?per_page=6&sort_by=price&sort_order=desc
+INFO:     172.31.128.51:37626 - "GET / HTTP/1.1" 200 OK
+Sending Request to the Target: GET /api/inventory?per_page=6&sort_by=price&sort_order=desc
+INFO:     10.82.3.63:0 - "GET /api/inventory?per_page=6&sort_by=price&sort_order=desc HTTP/1.1" 307 Temporary Redirect
+Received Response from the Target: 307 /api/inventory?per_page=6&sort_by=price&sort_order=desc
+Sending Request to the Target: GET /api/inventory?per_page=6&sort_by=price&sort_order=desc
+INFO:     10.82.3.63:0 - "GET /api/inventory?per_page=6&sort_by=price&sort_order=desc HTTP/1.1" 307 Temporary Redirect
+Received Response from the Target: 307 /api/inventory?per_page=6&sort_by=price&sort_order=desc
+^C
