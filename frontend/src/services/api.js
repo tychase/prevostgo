@@ -3,6 +3,15 @@ import axios from 'axios';
 // Use environment variable for production, proxy for development
 let apiUrl = import.meta.env.VITE_API_URL || '/api';
 
+// TEMPORARY FIX: Force production URL if not set
+if (!apiUrl || apiUrl === '/api') {
+  const isProduction = window.location.hostname === 'prevostgo.com' || window.location.hostname === 'www.prevostgo.com';
+  if (isProduction) {
+    console.warn('VITE_API_URL not set, using hardcoded production URL');
+    apiUrl = 'https://prevostgo-production.up.railway.app/api';
+  }
+}
+
 // Debug logging
 console.log('Original VITE_API_URL:', import.meta.env.VITE_API_URL);
 console.log('Initial apiUrl:', apiUrl);
