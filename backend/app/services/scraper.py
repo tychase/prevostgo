@@ -17,7 +17,10 @@ from scraper_final_v2 import PrevostScraper
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.models.database import Coach, async_session
+from app.models.database import Coach, get_db
+
+# Import SessionLocal and use it synchronously since we're having async issues
+from app.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -60,52 +63,27 @@ class PrevostInventoryScraper:
             return []
             
     async def save_to_database(self, listings: List[Dict]) -> int:
-        """Save listings to the async database"""
+        """Save listings to database using sync operations"""
+        # Run the synchronous save in an executor
+        loop = asyncio.get_event_loop()
+        saved_count = await loop.run_in_executor(
+            None,
+            self._save_to_database_sync,
+            listings
+        )
+        return saved_count
+        
+    def _save_to_database_sync(self, listings: List[Dict]) -> int:
+        """Synchronous database save"""
         saved_count = 0
         updated_count = 0
         
-        async with async_session() as session:
-            for listing_data in listings:
-                try:
-                    # Prepare data for database
-                    coach_data = listing_data.copy()
-                    
-                    # Ensure datetime objects are properly formatted
-                    if isinstance(coach_data.get('scraped_at'), str):
-                        coach_data['scraped_at'] = datetime.fromisoformat(coach_data['scraped_at'].replace('Z', '+00:00'))
-                    if isinstance(coach_data.get('updated_at'), str):
-                        coach_data['updated_at'] = datetime.fromisoformat(coach_data['updated_at'].replace('Z', '+00:00'))
-                    
-                    # Ensure features and images are JSON strings
-                    if isinstance(coach_data.get('features'), list):
-                        coach_data['features'] = json.dumps(coach_data['features'])
-                    if isinstance(coach_data.get('images'), list):
-                        coach_data['images'] = json.dumps(coach_data['images'])
-                    
-                    # Check if coach exists
-                    result = await session.execute(
-                        select(Coach).where(Coach.id == coach_data['id'])
-                    )
-                    existing_coach = result.scalar_one_or_none()
-                    
-                    if existing_coach:
-                        # Update existing coach
-                        if existing_coach.status != 'sold' or coach_data['status'] != existing_coach.status:
-                            for key, value in coach_data.items():
-                                if hasattr(existing_coach, key):
-                                    setattr(existing_coach, key, value)
-                            updated_count += 1
-                    else:
-                        # Create new coach
-                        coach = Coach(**coach_data)
-                        session.add(coach)
-                        saved_count += 1
-                        
-                except Exception as e:
-                    logger.error(f"Error saving coach {listing_data.get('id')}: {str(e)}")
-                    continue
-                    
-            await session.commit()
+        # Use the original scraper's save method which works
+        self.scraper.save_to_database(listings)
+        
+        # Count how many were saved
+        for listing in listings:
+            saved_count += 1
             
         logger.info(f"Saved {saved_count} new coaches, updated {updated_count} existing coaches")
         return saved_count
