@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PrevostGO Database Dashboard</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 30px;
+        }
+        
+        .actions {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        
+        .btn:hover {
+            background: #0052a3;
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stat-card .subtitle {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .coaches-table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .table-header {
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .table-header h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 2px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-available { 
+            background: #d4edda; 
+            color: #155724; 
+        }
+        
+        .status-pending { 
+            background: #fff3cd; 
+            color: #856404; 
+        }
+        
+        .status-sold { 
+            background: #f8d7da; 
+            color: #721c24; 
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0066cc;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .price-breakdown {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .price-breakdown h4 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        
+        .price-bar {
+            display: flex;
+            height: 30px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .price-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .converters-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .converters-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .converters-list li:last-child {
+            border-bottom: none;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            table {
+                font-size: 14px;
+            }
+            
+            th, td {
+                padding: 8px;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚌 PrevostGO Database Dashboard</h1>
+        
+        <div id="message"></div>
+        
+        <div class="actions">
+            <button class="btn" onclick="runScraper()" id="scraper-btn">
+                🔄 Run Scraper
+            </button>
+            <button class="btn" onclick="refreshData()">
+                🔃 Refresh Data
+            </button>
+            <button class="btn btn-danger" onclick="clearSold()">
+                🗑️ Clear Sold Coaches
+            </button>
+        </div>
+        
+        <div class="stats-grid" id="stats">
+            <div class="stat-card">
+                <h3>Loading...</h3>
+                <div class="value">-</div>
+            </div>
+        </div>
+        
+        <div class="coaches-table">
+            <div class="table-header">
+                <h2>Coach Inventory</h2>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Year</th>
+                            <th>Converter</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                            <th>Views</th>
+                            <th>State</th>
+                            <th>Added</th>
+                        </tr>
+                    </thead>
+                    <tbody id="coaches-list">
+                        <tr><td colspan="8" class="loading">Loading coaches...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let isLoading = false;
+        
+        function showMessage(message, type = 'success') {
+            const messageEl = document.getElementById('message');
+            messageEl.className = type;
+            messageEl.textContent = message;
+            messageEl.style.display = 'block';
+            
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 5000);
+        }
+        
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                
+                if (stats.error) {
+                    throw new Error(stats.error);
+                }
+                
+                // Calculate percentages for price distribution
+                const totalAvailable = stats.by_status.available || 0;
+                const priceData = stats.price_distribution || {};
+                
+                document.querySelector('.stats-grid').innerHTML = `
+                    <div class="stat-card">
+                        <h3>Total Coaches</h3>
+                        <div class="value">${stats.total_coaches || 0}</div>
+                        <div class="subtitle">In database</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Available</h3>
+                        <div class="value">${totalAvailable}</div>
+                        <div class="subtitle">${stats.by_status.sold || 0} sold</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>New This Week</h3>
+                        <div class="value">${stats.new_this_week || 0}</div>
+                        <div class="subtitle">Recently added</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>With Prices</h3>
+                        <div class="value">${totalAvailable - (priceData.no_price || 0)}</div>
+                        <div class="subtitle">${priceData.no_price || 0} contact for price</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Conditions</h3>
+                        <div class="value">${stats.by_condition.new || 0}</div>
+                        <div class="subtitle">New / ${stats.by_condition['pre-owned'] || 0} Pre-owned</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Price Distribution</h3>
+                        <div class="price-breakdown">
+                            <div class="price-bar">
+                                ${generatePriceBar(priceData, totalAvailable)}
+                            </div>
+                            <div style="font-size: 12px; color: #666;">
+                                < $200k: ${priceData.under_200k || 0} |
+                                $200-500k: ${priceData.range_200_500k || 0} |
+                                $500k-1M: ${priceData.range_500k_1m || 0} |
+                                > $1M: ${priceData.over_1m || 0}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Top Converters</h3>
+                        <ul class="converters-list">
+                            ${(stats.top_converters || []).map(conv => `
+                                <li>
+                                    <span>${conv.converter || 'Unknown'}</span>
+                                    <strong>${conv.count}</strong>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                showMessage('Error loading statistics: ' + error.message, 'error');
+            }
+        }
+        
+        function generatePriceBar(priceData, total) {
+            if (!total) return '<div style="text-align: center; color: #666;">No data</div>';
+            
+            const segments = [
+                { value: priceData.under_200k || 0, color: '#28a745', label: '< $200k' },
+                { value: priceData.range_200_500k || 0, color: '#17a2b8', label: '$200-500k' },
+                { value: priceData.range_500k_1m || 0, color: '#ffc107', label: '$500k-1M' },
+                { value: priceData.over_1m || 0, color: '#dc3545', label: '> $1M' }
+            ];
+            
+            return segments.map(seg => {
+                const percentage = (seg.value / total) * 100;
+                if (percentage === 0) return '';
+                return `<div class="price-segment" style="background: ${seg.color}; width: ${percentage}%;">
+                    ${percentage > 10 ? Math.round(percentage) + '%' : ''}
+                </div>`;
+            }).join('');
+        }
+        
+        async function loadCoaches() {
+            try {
+                const response = await fetch('/api/coaches?per_page=50');
+                const coaches = await response.json();
+                
+                const tbody = document.getElementById('coaches-list');
+                
+                if (!coaches || coaches.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">No coaches found. Run the scraper to populate the database.</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = coaches.map(coach => `
+                    <tr>
+                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            ${coach.title || 'Untitled'}
+                        </td>
+                        <td>${coach.year || '-'}</td>
+                        <td>${coach.converter || '-'}</td>
+                        <td>${coach.price || 'Contact'}</td>
+                        <td><span class="status-badge status-${coach.status || 'available'}">${coach.status || 'available'}</span></td>
+                        <td>${coach.view_count || 0}</td>
+                        <td>${coach.dealer_state || '-'}</td>
+                        <td>${coach.created_at ? new Date(coach.created_at).toLocaleDateString() : '-'}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading coaches:', error);
+                showMessage('Error loading coaches: ' + error.message, 'error');
+            }
+        }
+        
+        async function runScraper() {
+            if (isLoading) return;
+            
+            if (!confirm('Run the scraper to fetch new coaches? This may take a few minutes.')) {
+                return;
+            }
+            
+            isLoading = true;
+            const btn = document.getElementById('scraper-btn');
+            btn.disabled = true;
+            btn.innerHTML = 'Running... <span class="spinner"></span>';
+            
+            try {
+                const response = await fetch('/api/run-scraper', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('Scraper completed successfully! Refreshing data...', 'success');
+                    setTimeout(refreshData, 2000);
+                } else {
+                    showMessage('Scraper failed: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error running scraper: ' + error.message, 'error');
+            } finally {
+                isLoading = false;
+                btn.disabled = false;
+                btn.innerHTML = '🔄 Run Scraper';
+            }
+        }
+        
+        async function clearSold() {
+            if (!confirm('Remove all sold coaches from the database?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/clear-sold', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(result.message, 'success');
+                    refreshData();
+                } else {
+                    showMessage('Error: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error clearing sold coaches: ' + error.message, 'error');
+            }
+        }
+        
+        function refreshData() {
+            loadStats();
+            loadCoaches();
+        }
+        
+        // Auto-refresh every 30 seconds
+        setInterval(refreshData, 30000);
+        
+        // Load data on page load
+        refreshData();
+    </script>
+</body>
+</html>
