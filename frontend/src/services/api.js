@@ -1,28 +1,16 @@
 import axios from 'axios';
 import { debugInfo } from './api-debug';
 
-// Use environment variable for production, proxy for development
+// With Vercel-Railway integration, this is much cleaner!
 let apiUrl = import.meta.env.VITE_API_URL || '/api';
 
-// CRITICAL FIX: Always force HTTPS for Railway URLs
-if (apiUrl && apiUrl.includes('railway.app')) {
+// Ensure HTTPS for production
+if (apiUrl && !apiUrl.startsWith('http://localhost') && !apiUrl.startsWith('/')) {
   apiUrl = apiUrl.replace('http://', 'https://');
 }
 
-// TEMPORARY FIX: Force production URL if not set
-if (!apiUrl || apiUrl === '/api') {
-  const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-  if (isProduction) {
-    console.warn('VITE_API_URL not set, using hardcoded production URL');
-    apiUrl = 'https://prevostgo-production.up.railway.app/api';
-  }
-}
-
-// Additional check for Vercel deployments
-if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('prevostgo')) {
-  console.warn('Detected Vercel/production deployment, forcing production API URL');
-  apiUrl = 'https://prevostgo-production.up.railway.app/api';
-}
+// The Railway integration will provide the correct URL automatically
+// No need for hardcoded fallbacks!
 
 // Debug logging
 console.log('=== API Configuration Debug ===');
