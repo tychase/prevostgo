@@ -5,6 +5,7 @@ FastAPI application for the PrevostGO digital showroom
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 import os
@@ -38,8 +39,15 @@ app = FastAPI(
     title="PrevostGO API",
     description="B2B/B2C digital showroom and lead management for Prevost luxury coaches",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    # Tell FastAPI it's behind a proxy
+    root_path="",
+    root_path_in_servers=False
 )
+
+# CRITICAL: Add ProxyHeaders middleware to handle HTTPS behind Railway proxy
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["*"])
 
 # Configure CORS
 # Get allowed origins from environment variable
