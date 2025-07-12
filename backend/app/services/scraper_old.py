@@ -1,6 +1,6 @@
 """
-PrevostGO Inventory Scraper Service - Fixed PostgreSQL Version
-Ensures proper database connection
+PrevostGO Inventory Scraper Service - PostgreSQL Version
+Direct integration with PostgreSQL database
 """
 
 import asyncio
@@ -13,12 +13,15 @@ import hashlib
 import requests
 from bs4 import BeautifulSoup
 import time
-import os
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, and_
+from app.models.database import Coach, get_db, SessionLocal
+
+# Debug: Check database configuration
+import os
+print(f"[SCRAPER] DATABASE_URL from env: {os.getenv('DATABASE_URL', 'NOT SET')[:50] if os.getenv('DATABASE_URL') else 'NOT SET'}...")
+print(f"[SCRAPER] Current working directory: {os.getcwd()}")
 
 logger = logging.getLogger(__name__)
 
@@ -30,26 +33,6 @@ class PrevostInventoryScraper:
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        
-    def get_database_session(self):
-        """Get a database session with proper configuration"""
-        # Get DATABASE_URL at runtime, not import time
-        database_url = os.getenv("DATABASE_URL", "sqlite:///prevostgo.db")
-        
-        # Fix PostgreSQL URL
-        if database_url.startswith("postgres://"):
-            database_url = database_url.replace("postgres://", "postgresql://", 1)
-            
-        print(f"[SCRAPER] Connecting to database: {database_url[:50]}...")
-        
-        # Create engine and session
-        if "sqlite" in database_url:
-            engine = create_engine(database_url, connect_args={"check_same_thread": False})
-        else:
-            engine = create_engine(database_url)
-            
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        return SessionLocal(), engine
         
     def generate_id(self, coach):
         """Generate unique ID for coach"""
@@ -244,17 +227,16 @@ class PrevostInventoryScraper:
         saved_count = 0
         updated_count = 0
         
-        # Get database session with proper configuration
-        db, engine = self.get_database_session()
+        # Use synchronous session for now due to async issues
+        db = SessionLocal()
         
-        # Import Coach model here to ensure database is configured
-        from app.models.database import Coach
+        # Debug: Check what database we're actually connected to
+        from app.database import DATABASE_URL, engine
+        print(f"[SCRAPER SAVE] DATABASE_URL: {DATABASE_URL[:50] if DATABASE_URL else 'None'}...")
+        print(f"[SCRAPER SAVE] Engine URL: {engine.url}")
+        print(f"[SCRAPER SAVE] Saving {len(listings)} coaches to database...")
         
         try:
-            # Ensure tables exist
-            from app.database import Base
-            Base.metadata.create_all(bind=engine)
-            
             for coach_data in listings:
                 try:
                     # Check if exists
@@ -309,12 +291,6 @@ class PrevostInventoryScraper:
                     continue
                     
             db.commit()
-            
-            # Verify the save
-            total_coaches = db.query(Coach).count()
-            available_coaches = db.query(Coach).filter(Coach.status == 'available').count()
-            print(f"\n[VERIFY] Total coaches in database: {total_coaches}")
-            print(f"[VERIFY] Available coaches: {available_coaches}")
             
         except Exception as e:
             print(f"Database error: {e}")
