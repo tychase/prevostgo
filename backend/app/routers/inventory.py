@@ -235,103 +235,66 @@ async def get_inventory_summary(db: AsyncSession = Depends(get_db)):
     return InventorySummary(**summary)
 
 @router.get("/{coach_id}")
-def get_coach(
+async def get_coach(
     coach_id: str,
-    session_id: Optional[str] = None
+    session_id: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get single coach by ID - using synchronous SQLite for now"""
-    import sqlite3
-    import json
-    
+    """Get single coach by ID"""
     try:
-        # Use direct SQLite connection to avoid async issues
-        conn = sqlite3.connect('prevostgo.db')
-        cursor = conn.cursor()
+        # Get coach using async SQLAlchemy
+        result = await db.execute(
+            select(Coach).where(Coach.id == coach_id)
+        )
+        coach = result.scalar_one_or_none()
         
-        # Get coach
-        cursor.execute("SELECT * FROM coaches WHERE id = ?", (coach_id,))
-        row = cursor.fetchone()
-        
-        if not row:
-            conn.close()
+        if not coach:
             raise HTTPException(status_code=404, detail="Coach not found")
         
-        # Get column names
-        columns = [desc[0] for desc in cursor.description]
-        coach_dict = dict(zip(columns, row))
-        
         # Update views
-        cursor.execute("UPDATE coaches SET views = views + 1 WHERE id = ?", (coach_id,))
+        coach.views = (coach.views or 0) + 1
         
-        # Log analytics event (simplified for now)
-        cursor.execute(
-            "INSERT INTO analytics (event_type, coach_id, session_id, event_data) VALUES (?, ?, ?, ?)",
-            ("view", coach_id, session_id, json.dumps({"source": "api"}))
+        # Log analytics event
+        analytics = Analytics(
+            event_type="view",
+            coach_id=coach_id,
+            session_id=session_id,
+            event_data={"source": "api"}
         )
-        
-        conn.commit()
-        conn.close()
-        
-        # Parse JSON fields
-        for field in ['images', 'features']:
-            if coach_dict.get(field):
-                try:
-                    coach_dict[field] = json.loads(coach_dict[field])
-                except:
-                    coach_dict[field] = []
-            else:
-                coach_dict[field] = []
-        
-        # Convert price from cents to dollars
-        if coach_dict.get('price'):
-            coach_dict['price'] = coach_dict['price'] // 100
-        
-        # Normalize fields
-        coach_dict['price_status'] = coach_dict.get('price_status') or 'contact_for_price'
-        coach_dict['slide_count'] = coach_dict.get('slide_count') or 0
-        
-        # Validate email
-        if coach_dict.get('dealer_email') and '@' not in str(coach_dict['dealer_email']):
-            coach_dict['dealer_email'] = None
-        
-        # Normalize condition
-        condition = str(coach_dict.get('condition', '')).lower()
-        if 'new' in condition and 'pre' not in condition:
-            coach_dict['condition'] = 'new'
-        else:
-            coach_dict['condition'] = 'pre-owned'
+        db.add(analytics)
+        await db.commit()
         
         # Create response
         response = {
-            "id": coach_dict['id'],
-            "title": coach_dict['title'],
-            "year": coach_dict['year'],
-            "model": coach_dict.get('model'),
-            "chassis_type": coach_dict.get('chassis_type'),
-            "converter": coach_dict.get('converter'),
-            "condition": coach_dict['condition'],
-            "price": coach_dict.get('price'),
-            "price_display": coach_dict.get('price_display'),
-            "price_status": coach_dict['price_status'],
-            "mileage": coach_dict.get('mileage'),
-            "engine": coach_dict.get('engine'),
-            "slide_count": coach_dict['slide_count'],
-            "features": coach_dict['features'],
-            "bathroom_config": coach_dict.get('bathroom_config'),
-            "stock_number": coach_dict.get('stock_number'),
-            "images": coach_dict['images'],
-            "virtual_tour_url": coach_dict.get('virtual_tour_url'),
-            "dealer_name": coach_dict.get('dealer_name'),
-            "dealer_state": coach_dict.get('dealer_state'),
-            "dealer_phone": coach_dict.get('dealer_phone'),
-            "dealer_email": coach_dict.get('dealer_email'),
-            "listing_url": coach_dict.get('listing_url'),
-            "source": coach_dict.get('source', 'prevost-stuff.com'),
-            "status": coach_dict.get('status', 'available'),
-            "scraped_at": coach_dict.get('scraped_at'),
-            "updated_at": coach_dict.get('updated_at'),
-            "views": coach_dict.get('views', 0),
-            "inquiries": coach_dict.get('inquiries', 0)
+            "id": coach.id,
+            "title": coach.title,
+            "year": coach.year,
+            "model": coach.model,
+            "chassis_type": coach.chassis_type,
+            "converter": coach.converter,
+            "condition": coach.condition,
+            "price": coach.price // 100 if coach.price else None,
+            "price_display": coach.price_display,
+            "price_status": coach.price_status or 'contact_for_price',
+            "mileage": coach.mileage,
+            "engine": coach.engine,
+            "slide_count": coach.slide_count or 0,
+            "features": coach.features or [],
+            "bathroom_config": coach.bathroom_config,
+            "stock_number": coach.stock_number,
+            "images": coach.images or [],
+            "virtual_tour_url": coach.virtual_tour_url,
+            "dealer_name": coach.dealer_name,
+            "dealer_state": coach.dealer_state,
+            "dealer_phone": coach.dealer_phone,
+            "dealer_email": coach.dealer_email,
+            "listing_url": coach.listing_url,
+            "source": coach.source or 'prevost-stuff.com',
+            "status": coach.status or 'available',
+            "scraped_at": coach.scraped_at,
+            "updated_at": coach.updated_at,
+            "views": coach.views or 0,
+            "inquiries": coach.inquiries or 0
         }
         
         return response
