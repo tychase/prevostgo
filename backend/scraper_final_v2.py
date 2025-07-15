@@ -233,25 +233,30 @@ class PrevostScraper:
         return listings
         
     def fetch_detail_prices(self, limit=50):
-        """Fetch prices from individual detail pages for coaches without prices"""
+        """Fetch prices and images from individual detail pages"""
         conn = self.get_db()
         cursor = conn.cursor()
         
-        # Get coaches without prices that have valid URLs
+        # Get coaches that need more details (missing prices or only have one image)
         cursor.execute("""
-            SELECT id, listing_url, title 
+            SELECT id, listing_url, title, images
             FROM coaches 
             WHERE status = 'available'
-            AND (price IS NULL OR price_status = 'contact_for_price') 
             AND listing_url != '' 
             AND listing_url != '#'
             AND listing_url LIKE '%.html'
+            AND (
+                (price IS NULL OR price_status = 'contact_for_price')
+                OR 
+                (images = '[]' OR images = '[""]' OR LENGTH(images) < 50)
+            )
             ORDER BY scraped_at DESC
             LIMIT ?
         """, (limit,))
         
         coaches_to_update = cursor.fetchall()
         updated_count = 0
+        images_updated = 0
         
         print(f"\nFetching detail pages for {len(coaches_to_update)} coaches...")
         
@@ -293,8 +298,59 @@ class PrevostScraper:
                         if found_price:
                             break
                     
-                    if not found_price:
-                        print(f"  - No valid price found")
+                    # Look for all images on the detail page
+                    images = []
+                    seen_images = set()
+                    
+                    # Try to load existing images
+                    try:
+                        existing_images = json.loads(coach['images']) if coach['images'] else []
+                        for img in existing_images:
+                            if img and img not in seen_images:
+                                images.append(img)
+                                seen_images.add(img)
+                    except:
+                        pass
+                    
+                    # Find all image tags
+                    for img in soup.find_all('img'):
+                        src = img.get('src', '')
+                        if src:
+                            # Skip small images, logos, icons
+                            if any(skip in src.lower() for skip in ['thumb', 'logo', 'icon', 'banner', 'button']):
+                                continue
+                            
+                            # Make URL absolute
+                            if not src.startswith('http'):
+                                src = f"https://www.prevost-stuff.com/{src.lstrip('/')}"
+                            
+                            # Check if it's a coach image (has certain patterns in URL)
+                            if any(pattern in src.lower() for pattern in ['.jpg', '.jpeg', '.png']) and src not in seen_images:
+                                images.append(src)
+                                seen_images.add(src)
+                    
+                    # Also check for links that might be full-size images
+                    for link in soup.find_all('a', href=True):
+                        href = link['href']
+                        if any(ext in href.lower() for ext in ['.jpg', '.jpeg', '.png']):
+                            if not href.startswith('http'):
+                                href = f"https://www.prevost-stuff.com/{href.lstrip('/')}"
+                            if href not in seen_images:
+                                images.append(href)
+                                seen_images.add(href)
+                    
+                    # Update images if we found more than before
+                    if len(images) > len(json.loads(coach['images']) if coach['images'] else []):
+                        cursor.execute("""
+                            UPDATE coaches 
+                            SET images = ?, updated_at = ?
+                            WHERE id = ?
+                        """, (json.dumps(images), datetime.now(timezone.utc).isoformat(), coach['id']))
+                        images_updated += 1
+                        print(f"  ✓ Found {len(images)} images")
+                    
+                    if not found_price and len(images) == len(json.loads(coach['images']) if coach['images'] else []):
+                        print(f"  - No new data found")
                 
                 # Small delay to be respectful
                 time.sleep(0.5)
@@ -305,8 +361,8 @@ class PrevostScraper:
         conn.commit()
         conn.close()
         
-        print(f"\nUpdated {updated_count} prices from detail pages")
-        return updated_count
+        print(f"\nUpdated {updated_count} prices and {images_updated} image sets from detail pages")
+        return updated_count + images_updated
         
     def save_to_database(self, listings):
         """Save listings to database"""
@@ -514,10 +570,10 @@ def main():
         print("\nStep 2: Saving to database...")
         scraper.save_to_database(listings)
         
-        # Step 3: Fetch additional prices from detail pages
-        print("\nStep 3: Fetching prices from detail pages...")
-        # Fetch more prices since main page doesn't have them
-        scraper.fetch_detail_prices(limit=50)
+        # Step 3: Fetch additional details (prices and images) from detail pages
+        print("\nStep 3: Fetching prices and images from detail pages...")
+        # Fetch details for coaches that need more info
+        scraper.fetch_detail_prices(limit=100)
         
         # Step 4: Show statistics
         scraper.get_stats()

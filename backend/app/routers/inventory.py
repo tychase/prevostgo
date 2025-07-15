@@ -13,6 +13,7 @@ from app.models.schemas import (
     SearchFilters, InventorySummary, AnalyticsEvent
 )
 from app.services.scraper import PrevostInventoryScraper
+from app.services.scraper_enhanced import EnhancedPrevostInventoryScraper
 
 router = APIRouter()
 
@@ -431,11 +432,15 @@ async def track_analytics_event(
 async def trigger_scrape(
     fetch_details: bool = Query(True, description="Fetch detailed info for each listing"),
     limit: Optional[int] = Query(None, description="Limit number of coaches to scrape"),
+    enhanced: bool = Query(True, description="Use enhanced scraper with image fetching"),
     db: AsyncSession = Depends(get_db)
 ):
     """Manually trigger inventory scraper"""
     try:
-        scraper = PrevostInventoryScraper()
+        if enhanced:
+            scraper = EnhancedPrevostInventoryScraper()
+        else:
+            scraper = PrevostInventoryScraper()
         
         # Run the scraper
         listings = await scraper.scrape_inventory(fetch_details=fetch_details, limit=limit)
@@ -446,6 +451,7 @@ async def trigger_scrape(
         return {
             "success": True,
             "message": f"Scraping completed successfully",
+            "scraper_type": "enhanced" if enhanced else "basic",
             "total_found": len(listings),
             "new_saved": saved_count,
             "details": {

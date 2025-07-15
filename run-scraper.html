@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trigger PrevostGO Scraper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>PrevostGO Scraper Control</h1>
+    
+    <button onclick="runScraper(10)">Scrape 10 Coaches</button>
+    <button onclick="runScraper(50)">Scrape 50 Coaches</button>
+    <button onclick="runScraper()">Scrape All Coaches</button>
+    <button onclick="checkInventory()">Check Inventory</button>
+    
+    <div id="result"></div>
+
+    <script>
+        const API_URL = 'https://prevostgo-production.up.railway.app/api';
+        
+        async function runScraper(limit) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Running scraper...';
+            
+            try {
+                const url = limit 
+                    ? `${API_URL}/inventory/scrape?fetch_details=true&limit=${limit}`
+                    : `${API_URL}/inventory/scrape?fetch_details=true`;
+                    
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `<span class="success">Scraper Response:</span>\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error:</span>\n${error.message}`;
+            }
+        }
+        
+        async function checkInventory() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Checking inventory...';
+            
+            try {
+                const response = await fetch(`${API_URL}/inventory`);
+                const data = await response.json();
+                resultDiv.innerHTML = `<span class="success">Inventory:</span>\nTotal coaches: ${data.total}\nShowing: ${data.coaches.length}\n\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error:</span>\n${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

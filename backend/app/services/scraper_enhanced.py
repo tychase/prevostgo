@@ -1,5 +1,5 @@
 """
-PrevostGO Inventory Scraper Service - Fixed to only get real coaches
+Enhanced PrevostGO Inventory Scraper Service with Detail Page Fetching
 """
 
 import asyncio
@@ -21,8 +21,8 @@ from sqlalchemy import select, update, and_
 
 logger = logging.getLogger(__name__)
 
-class PrevostInventoryScraper:
-    """Scraper that works directly with PostgreSQL"""
+class EnhancedPrevostInventoryScraper:
+    """Enhanced scraper that fetches all images from detail pages"""
     
     def __init__(self):
         self.base_url = "https://www.prevost-stuff.com/forsale/public_list_ads.php"
@@ -96,7 +96,6 @@ class PrevostInventoryScraper:
         
     def is_valid_coach_listing(self, title, url):
         """Check if this is a real coach listing"""
-        # Skip non-coach pages
         skip_patterns = [
             'Coach_Dealers.html',
             'index.html',
@@ -109,22 +108,126 @@ class PrevostInventoryScraper:
             if pattern in url:
                 return False
                 
-        # Must have a year in the title or URL
         if not re.search(r'19\d{2}|20\d{2}', title + url):
             return False
             
-        # Must have "Prevost" in title
         if 'Prevost' not in title:
             return False
             
-        # Title should be more than just "Prevost"
         if title.strip() == 'Prevost':
             return False
             
         return True
         
+    def fetch_listing_details(self, listing_url):
+        """Fetch detailed information including all images from listing page"""
+        try:
+            print(f"  Fetching details from: {listing_url}")
+            response = requests.get(listing_url, headers=self.headers, timeout=30)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            details = {
+                'images': [],
+                'description': '',
+                'additional_info': {},
+                'price_info': None
+            }
+            
+            # Extract price from detail page
+            text = soup.get_text()
+            price_patterns = [
+                r'Price:\s*\$\s*([\d,]+)',
+                r'Asking\s+Price:\s*\$\s*([\d,]+)',
+                r'\$\s*([\d,]+)(?:\s*USD)?',
+            ]
+            
+            for pattern in price_patterns:
+                matches = re.findall(pattern, text)
+                for match in matches:
+                    price_str = match.replace(',', '')
+                    if price_str.isdigit():
+                        price = int(price_str)
+                        if 50000 < price < 5000000:  # Between $50k and $5M
+                            details['price_info'] = {
+                                'price': price * 100,  # Convert to cents
+                                'price_display': f"${price:,}",
+                                'price_status': 'available'
+                            }
+                            break
+                if details['price_info']:
+                    break
+            
+            # Find all images
+            seen_images = set()
+            
+            # Look for image tags
+            for img in soup.find_all('img'):
+                src = img.get('src', '')
+                if src:
+                    # Skip thumbnails, logos, icons
+                    if any(skip in src.lower() for skip in ['thumb', 'logo', 'icon', 'banner', 'button', 'spacer']):
+                        continue
+                    
+                    # Make URL absolute
+                    if not src.startswith('http'):
+                        src = f"https://www.prevost-stuff.com/{src.lstrip('/')}"
+                    
+                    # Check if it's likely a coach image
+                    if any(pattern in src.lower() for pattern in ['.jpg', '.jpeg', '.png']) and src not in seen_images:
+                        details['images'].append(src)
+                        seen_images.add(src)
+            
+            # Also check for links to full-size images
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                if any(ext in href.lower() for ext in ['.jpg', '.jpeg', '.png']):
+                    if not href.startswith('http'):
+                        href = f"https://www.prevost-stuff.com/{href.lstrip('/')}"
+                    if href not in seen_images:
+                        details['images'].append(href)
+                        seen_images.add(href)
+            
+            # Extract description - look for main content blocks
+            content_blocks = soup.find_all(['div', 'td'], text=re.compile(r'.{100,}'))
+            for block in content_blocks:
+                text = block.get_text(strip=True)
+                if not any(skip in text.lower() for skip in ['copyright', 'all rights reserved', 'privacy policy', 'navigation']):
+                    if len(text) > len(details['description']):
+                        details['description'] = text
+            
+            # Extract additional info from tables
+            for table in soup.find_all('table'):
+                rows = table.find_all('tr')
+                for row in rows:
+                    cells = row.find_all(['td', 'th'])
+                    if len(cells) >= 2:
+                        label = cells[0].get_text(strip=True).lower()
+                        value = cells[1].get_text(strip=True)
+                        
+                        # Map common fields
+                        if 'mileage' in label and value:
+                            mileage_match = re.search(r'([\d,]+)', value)
+                            if mileage_match:
+                                details['additional_info']['mileage'] = int(mileage_match.group(1).replace(',', ''))
+                        elif 'engine' in label:
+                            details['additional_info']['engine'] = value
+                        elif 'transmission' in label:
+                            details['additional_info']['transmission'] = value
+                        elif 'length' in label:
+                            details['additional_info']['length'] = value
+                        elif 'vin' in label:
+                            details['additional_info']['vin'] = value
+            
+            print(f"    Found {len(details['images'])} images")
+            return details
+            
+        except Exception as e:
+            print(f"    Error fetching details: {e}")
+            return None
+        
     async def scrape_inventory(self, fetch_details: bool = True, limit: Optional[int] = None) -> List[Dict]:
-        """Scrape inventory from prevost-stuff.com"""
+        """Scrape inventory from prevost-stuff.com with enhanced detail fetching"""
         print("Fetching listings from prevost-stuff.com...")
         
         try:
@@ -153,7 +256,6 @@ class PrevostInventoryScraper:
                     if not listing_url.startswith('http'):
                         listing_url = f"https://www.prevost-stuff.com/{listing_url}"
                     
-                    # Skip if not a valid coach listing
                     if not self.is_valid_coach_listing(title, listing_url):
                         continue
                     
@@ -171,7 +273,7 @@ class PrevostInventoryScraper:
                     if year_match:
                         coach['year'] = int(year_match.group(1))
                     else:
-                        coach['year'] = 0  # Skip coaches without valid year
+                        coach['year'] = 0
                         continue
                     
                     if '(new)' in title:
@@ -186,6 +288,7 @@ class PrevostInventoryScraper:
                     
                     coach['features'] = self.extract_features_from_title(title)
                     
+                    # Parse listing page info
                     details_table = row.find('table', {'cellpadding': '3'})
                     if details_table:
                         details_text = details_table.get_text(separator='|', strip=True)
@@ -220,15 +323,16 @@ class PrevostInventoryScraper:
                                 except:
                                     coach['slide_count'] = 0
                     
+                    # Get thumbnail from listing page
                     img_tag = row.find('img')
                     if img_tag and img_tag.get('src'):
                         img_src = img_tag['src']
                         if not img_src.startswith('http'):
                             img_src = f"https://www.prevost-stuff.com/{img_src}"
-                        # Skip logo images
                         if 'logo' not in img_src.lower():
                             coach['images'] = [img_src]
                     
+                    # Set defaults
                     coach.setdefault('dealer_name', 'Unknown')
                     coach.setdefault('model', 'Unknown')
                     coach.setdefault('dealer_state', 'Unknown')
@@ -248,17 +352,50 @@ class PrevostInventoryScraper:
                     
         print(f"\nScraped {len(listings)} total listings")
         
+        # Fetch details for each listing if enabled
+        if fetch_details:
+            print("\nFetching detail pages for all listings...")
+            for i, coach in enumerate(listings):
+                if coach['status'] == 'available' and coach.get('listing_url'):
+                    print(f"\n{i+1}/{len(listings)} - {coach['title'][:50]}...")
+                    details = self.fetch_listing_details(coach['listing_url'])
+                    
+                    if details:
+                        # Update images
+                        if details['images']:
+                            coach['images'] = details['images']
+                        
+                        # Update price if found
+                        if details['price_info'] and not coach.get('price'):
+                            coach['price'] = details['price_info']['price']
+                            coach['price_display'] = details['price_info']['price_display']
+                            coach['price_status'] = details['price_info']['price_status']
+                        
+                        # Add additional info
+                        if details['additional_info'].get('mileage'):
+                            coach['mileage'] = details['additional_info']['mileage']
+                        if details['additional_info'].get('engine'):
+                            coach['engine'] = details['additional_info']['engine']
+                        
+                        # Add description to features if meaningful
+                        if details['description'] and len(details['description']) > 200:
+                            coach['description'] = details['description'][:1000]  # Limit length
+                    
+                    # Be respectful with delay
+                    time.sleep(0.5)
+                    
+                    if limit and i >= limit:
+                        break
+        
         available = [l for l in listings if l.get('status') == 'available']
         sold = [l for l in listings if l.get('status') == 'sold']
         with_prices = [l for l in available if l.get('price')]
         
+        print(f"\nFinal stats:")
         print(f"Available coaches: {len(available)}")
         print(f"Sold coaches: {len(sold)}")
         print(f"Available with prices: {len(with_prices)}")
         
-        if limit:
-            listings = listings[:limit]
-            
         return listings
         
     async def save_to_database(self, listings: List[Dict]) -> int:
@@ -278,7 +415,7 @@ class PrevostInventoryScraper:
             from app.database import Base
             Base.metadata.create_all(bind=engine)
             
-            # First, delete any bad entries (generic "Prevost" entries)
+            # Clean up invalid entries first
             bad_coaches = db.query(Coach).filter(
                 and_(
                     Coach.title == 'Prevost',
@@ -297,7 +434,10 @@ class PrevostInventoryScraper:
                     existing = db.query(Coach).filter(Coach.id == coach_data['id']).first()
                     
                     if existing:
-                        if existing.status != 'sold' or coach_data['status'] != existing.status:
+                        # Update if not sold or if status changed or if we have more images
+                        if (existing.status != 'sold' or coach_data['status'] != existing.status or 
+                            len(coach_data.get('images', [])) > len(existing.images or [])):
+                            
                             existing.title = coach_data['title']
                             existing.price = coach_data.get('price')
                             existing.price_display = coach_data.get('price_display')
@@ -309,8 +449,18 @@ class PrevostInventoryScraper:
                             existing.images = coach_data.get('images', [])
                             existing.features = coach_data.get('features', [])
                             existing.slide_count = coach_data.get('slide_count', 0)
+                            
+                            # Update additional fields if present
+                            if 'mileage' in coach_data:
+                                existing.mileage = coach_data['mileage']
+                            if 'engine' in coach_data:
+                                existing.engine = coach_data['engine']
+                            if 'description' in coach_data:
+                                existing.description = coach_data['description']
+                            
                             updated_count += 1
                     else:
+                        # Insert new
                         new_coach = Coach(
                             id=coach_data['id'],
                             title=coach_data['title'],
@@ -333,7 +483,10 @@ class PrevostInventoryScraper:
                             scraped_at=coach_data.get('scraped_at'),
                             updated_at=coach_data.get('updated_at'),
                             views=0,
-                            inquiries=0
+                            inquiries=0,
+                            mileage=coach_data.get('mileage'),
+                            engine=coach_data.get('engine'),
+                            description=coach_data.get('description')
                         )
                         db.add(new_coach)
                         saved_count += 1
@@ -359,4 +512,26 @@ class PrevostInventoryScraper:
         print(f"  - New coaches added: {saved_count}")
         print(f"  - Existing coaches updated: {updated_count}")
         
-        return saved_count
+        return saved_count + updated_count
+
+
+async def run_enhanced_scraper(limit: Optional[int] = None):
+    """Run the enhanced scraper"""
+    print("Running Enhanced PrevostGO Scraper")
+    print("=" * 50)
+    
+    scraper = EnhancedPrevostInventoryScraper()
+    
+    # Scrape with detail fetching enabled
+    listings = await scraper.scrape_inventory(fetch_details=True, limit=limit)
+    
+    if listings:
+        # Save to database
+        await scraper.save_to_database(listings)
+        print("\n✓ Enhanced scraping complete!")
+    else:
+        print("\n✗ No listings found.")
+
+
+if __name__ == "__main__":
+    asyncio.run(run_enhanced_scraper())

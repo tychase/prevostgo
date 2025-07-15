@@ -1,5 +1,6 @@
 """
-PrevostGO Inventory Scraper Service - Fixed to only get real coaches
+PrevostGO Inventory Scraper Service - PostgreSQL Version
+Direct integration with PostgreSQL database
 """
 
 import asyncio
@@ -12,12 +13,10 @@ import hashlib
 import requests
 from bs4 import BeautifulSoup
 import time
-import os
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, and_
+from app.models.database import Coach, get_db, SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -29,23 +28,6 @@ class PrevostInventoryScraper:
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        
-    def get_database_session(self):
-        """Get a database session with proper configuration"""
-        database_url = os.getenv("DATABASE_URL", "sqlite:///prevostgo.db")
-        
-        if database_url.startswith("postgres://"):
-            database_url = database_url.replace("postgres://", "postgresql://", 1)
-            
-        print(f"[SCRAPER] Connecting to database: {database_url[:50]}...")
-        
-        if "sqlite" in database_url:
-            engine = create_engine(database_url, connect_args={"check_same_thread": False})
-        else:
-            engine = create_engine(database_url)
-            
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        return SessionLocal(), engine
         
     def generate_id(self, coach):
         """Generate unique ID for coach"""
@@ -94,35 +76,6 @@ class PrevostInventoryScraper:
             
         return features
         
-    def is_valid_coach_listing(self, title, url):
-        """Check if this is a real coach listing"""
-        # Skip non-coach pages
-        skip_patterns = [
-            'Coach_Dealers.html',
-            'index.html',
-            'about.html',
-            'contact.html',
-            'services.html'
-        ]
-        
-        for pattern in skip_patterns:
-            if pattern in url:
-                return False
-                
-        # Must have a year in the title or URL
-        if not re.search(r'19\d{2}|20\d{2}', title + url):
-            return False
-            
-        # Must have "Prevost" in title
-        if 'Prevost' not in title:
-            return False
-            
-        # Title should be more than just "Prevost"
-        if title.strip() == 'Prevost':
-            return False
-            
-        return True
-        
     async def scrape_inventory(self, fetch_details: bool = True, limit: Optional[int] = None) -> List[Dict]:
         """Scrape inventory from prevost-stuff.com"""
         print("Fetching listings from prevost-stuff.com...")
@@ -148,14 +101,13 @@ class PrevostInventoryScraper:
                         continue
                     
                     title = link_tag.text.strip()
-                    listing_url = link_tag['href']
                     
+                    if 'Prevost' not in title:
+                        continue
+                    
+                    listing_url = link_tag['href']
                     if not listing_url.startswith('http'):
                         listing_url = f"https://www.prevost-stuff.com/{listing_url}"
-                    
-                    # Skip if not a valid coach listing
-                    if not self.is_valid_coach_listing(title, listing_url):
-                        continue
                     
                     coach = {
                         'title': title,
@@ -166,13 +118,9 @@ class PrevostInventoryScraper:
                         'images': []
                     }
                     
-                    # Extract year from title or URL
-                    year_match = re.search(r'(19\d{2}|20\d{2})', title + listing_url)
+                    year_match = re.search(r'(\d{4})', title)
                     if year_match:
                         coach['year'] = int(year_match.group(1))
-                    else:
-                        coach['year'] = 0  # Skip coaches without valid year
-                        continue
                     
                     if '(new)' in title:
                         coach['condition'] = 'new'
@@ -197,6 +145,11 @@ class PrevostInventoryScraper:
                                 coach['dealer_name'] = field.replace('Seller:', '').strip()
                             elif field.startswith('Model:'):
                                 coach['model'] = field.replace('Model:', '').strip()
+                            elif field.startswith('Year:') and 'year' not in coach:
+                                try:
+                                    coach['year'] = int(field.replace('Year:', '').strip())
+                                except:
+                                    pass
                             elif field.startswith('State:'):
                                 coach['dealer_state'] = field.replace('State:', '').strip()
                             elif field.startswith('Price:'):
@@ -225,12 +178,11 @@ class PrevostInventoryScraper:
                         img_src = img_tag['src']
                         if not img_src.startswith('http'):
                             img_src = f"https://www.prevost-stuff.com/{img_src}"
-                        # Skip logo images
-                        if 'logo' not in img_src.lower():
-                            coach['images'] = [img_src]
+                        coach['images'] = [img_src]
                     
                     coach.setdefault('dealer_name', 'Unknown')
                     coach.setdefault('model', 'Unknown')
+                    coach.setdefault('year', 0)
                     coach.setdefault('dealer_state', 'Unknown')
                     coach.setdefault('price', None)
                     coach.setdefault('price_display', 'Contact for Price')
@@ -270,33 +222,17 @@ class PrevostInventoryScraper:
         saved_count = 0
         updated_count = 0
         
-        db, engine = self.get_database_session()
-        
-        from app.models.database import Coach
+        # Use synchronous session for now due to async issues
+        db = SessionLocal()
         
         try:
-            from app.database import Base
-            Base.metadata.create_all(bind=engine)
-            
-            # First, delete any bad entries (generic "Prevost" entries)
-            bad_coaches = db.query(Coach).filter(
-                and_(
-                    Coach.title == 'Prevost',
-                    Coach.year == 0
-                )
-            ).all()
-            
-            if bad_coaches:
-                print(f"[CLEANUP] Removing {len(bad_coaches)} invalid coach entries...")
-                for bad_coach in bad_coaches:
-                    db.delete(bad_coach)
-                db.commit()
-            
             for coach_data in listings:
                 try:
+                    # Check if exists
                     existing = db.query(Coach).filter(Coach.id == coach_data['id']).first()
                     
                     if existing:
+                        # Update existing
                         if existing.status != 'sold' or coach_data['status'] != existing.status:
                             existing.title = coach_data['title']
                             existing.price = coach_data.get('price')
@@ -311,6 +247,7 @@ class PrevostInventoryScraper:
                             existing.slide_count = coach_data.get('slide_count', 0)
                             updated_count += 1
                     else:
+                        # Create new
                         new_coach = Coach(
                             id=coach_data['id'],
                             title=coach_data['title'],
@@ -343,11 +280,6 @@ class PrevostInventoryScraper:
                     continue
                     
             db.commit()
-            
-            total_coaches = db.query(Coach).count()
-            available_coaches = db.query(Coach).filter(Coach.status == 'available').count()
-            print(f"\n[VERIFY] Total coaches in database: {total_coaches}")
-            print(f"[VERIFY] Available coaches: {available_coaches}")
             
         except Exception as e:
             print(f"Database error: {e}")
