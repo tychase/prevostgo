@@ -30,6 +30,14 @@ class EnhancedPrevostInventoryScraper:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
         
+        # Common converter patterns found in coach titles
+        self.converter_patterns = [
+            'Marathon', 'Liberty', 'Elegant Lady', 'Outlaw', 'Millennium',
+            'Country Coach', 'Angola', 'Newell', 'Foretravel', 'American Eagle',
+            'Featherlite', 'Show Hauler', 'Royale', 'Parliament', 'Vantare',
+            'Beaver', 'Bluebird', 'MCI', 'Custom Coach', 'Explorer'
+        ]
+        
     def get_database_session(self):
         """Get a database session with proper configuration"""
         database_url = os.getenv("DATABASE_URL", "sqlite:///prevostgo.db")
@@ -59,21 +67,57 @@ class EnhancedPrevostInventoryScraper:
             
         price_str = str(price_str).strip()
         
+        # Check if sold
         if 'sold' in price_str.lower():
             return None, 'sold'
         
-        price_match = re.search(r'\$\s*([\d,]+)', price_str)
-        if price_match:
-            price_num = price_match.group(1).replace(',', '')
-            try:
-                price_dollars = int(price_num)
-                if 10000 < price_dollars < 5000000:
-                    return price_dollars * 100, 'available'
-            except:
-                pass
-                
+        # Try different price patterns
+        price_patterns = [
+            (r'\$\s*([\d,]+)', 1),           # $1,234,567
+            (r'\$([\d.]+)M', 1000000),       # $1.5M
+            (r'\$([\d.]+)m', 1000000),       # $1.5m
+            (r'([\d,]+)', 1),                # 1,234,567 (no dollar sign)
+        ]
+        
+        for pattern, multiplier in price_patterns:
+            match = re.search(pattern, price_str)
+            if match:
+                price_text = match.group(1).replace(',', '')
+                try:
+                    if multiplier > 1:
+                        # Handle millions
+                        price_dollars = int(float(price_text) * multiplier)
+                    else:
+                        price_dollars = int(float(price_text))
+                    
+                    # Validate reasonable price range for a coach
+                    if 10000 <= price_dollars <= 5000000:
+                        return price_dollars * 100, 'available'  # Convert to cents
+                except:
+                    pass
+                    
         return None, 'contact_for_price'
         
+    def extract_converter_from_title(self, title):
+        """Extract converter name from title"""
+        # Check each known converter pattern
+        for converter in self.converter_patterns:
+            if converter.lower() in title.lower():
+                return converter
+        
+        # Try to extract from patterns like "2019 Prevost Marathon H3-45"
+        # Pattern: Year Prevost [Converter] Model
+        pattern = r'\d{4}\s+Prevost\s+([A-Z][a-zA-Z\s]+?)(?:\s+(?:H3|X3|XLII|XL)|\s+\d+|\s+Double|\s+Single|\s+Quad|\s+Triple|$)'
+        match = re.search(pattern, title)
+        if match:
+            potential_converter = match.group(1).strip()
+            # Verify it's a known converter
+            for known in self.converter_patterns:
+                if known.lower() in potential_converter.lower():
+                    return known
+        
+        return None
+    
     def extract_features_from_title(self, title):
         """Extract features from the title"""
         features = []
@@ -339,7 +383,15 @@ class EnhancedPrevostInventoryScraper:
                     coach.setdefault('price', None)
                     coach.setdefault('price_display', 'Contact for Price')
                     coach.setdefault('price_status', 'contact_for_price')
-                    coach.setdefault('converter', 'Unknown')
+                    # Extract converter from title if not found in details
+                    if not coach.get('converter') or coach.get('converter') == 'Unknown':
+                        converter_from_title = self.extract_converter_from_title(title)
+                        if converter_from_title:
+                            coach['converter'] = converter_from_title
+                        else:
+                            coach['converter'] = ''  # Empty string instead of 'Unknown'
+                    else:
+                        coach.setdefault('converter', '')
                     coach.setdefault('slide_count', 0)
                     coach.setdefault('chassis_type', coach.get('model', 'Unknown'))
                     

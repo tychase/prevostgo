@@ -69,9 +69,14 @@ async def get_coaches(
         query = query.where(Coach.mileage <= mileage_max)
         
     if model:
-        # Use partial matching for model
+        # Use partial matching for model in both model and title fields
         model_term = f"%{model}%"
-        query = query.where(Coach.model.ilike(model_term))
+        query = query.where(
+            or_(
+                Coach.model.ilike(model_term),
+                Coach.title.ilike(model_term)
+            )
+        )
     
     if chassis:
         # Use partial matching for chassis types
@@ -85,9 +90,9 @@ async def get_coaches(
         )
     
     if converter:
-        # Use partial matching for converter to handle variations
+        # Use partial matching for converter in title field since converter field is empty
         converter_term = f"%{converter}%"
-        query = query.where(Coach.converter.ilike(converter_term))
+        query = query.where(Coach.title.ilike(converter_term))
         
     if slide_count is not None:
         query = query.where(Coach.slide_count == slide_count)
