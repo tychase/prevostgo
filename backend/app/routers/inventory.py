@@ -243,27 +243,69 @@ async def get_coach(
 ):
     """Get single coach by ID"""
     try:
-        # Get coach using async SQLAlchemy
-        result = await db.execute(
-            select(Coach).where(Coach.id == coach_id)
-        )
-        coach = result.scalar_one_or_none()
+        # Use raw SQL for maximum compatibility
+        from sqlalchemy import text
+        import json
         
-        if not coach:
+        # Get coach using raw SQL
+        query = text("""
+            SELECT 
+                id, title, year, model, chassis_type, converter, condition,
+                price, price_display, price_status, mileage, engine, slide_count,
+                features, bathroom_config, stock_number, images, virtual_tour_url,
+                dealer_name, dealer_state, dealer_phone, dealer_email, listing_url,
+                source, status, scraped_at, updated_at, views, inquiries
+            FROM coaches 
+            WHERE id = :coach_id
+        """)
+        
+        result = await db.execute(query, {"coach_id": coach_id})
+        coach_row = result.fetchone()
+        
+        if not coach_row:
             raise HTTPException(status_code=404, detail="Coach not found")
         
-        # Update views
-        coach.views = (coach.views or 0) + 1
+        # Update views using raw SQL
+        update_query = text("UPDATE coaches SET views = COALESCE(views, 0) + 1 WHERE id = :coach_id")
+        await db.execute(update_query, {"coach_id": coach_id})
         
-        # Log analytics event
-        analytics = Analytics(
-            event_type="view",
-            coach_id=coach_id,
-            session_id=session_id,
-            event_data={"source": "api"}
-        )
-        db.add(analytics)
+        # Log analytics using raw SQL
+        analytics_query = text("""
+            INSERT INTO analytics (event_type, coach_id, session_id, event_data, created_at)
+            VALUES (:event_type, :coach_id, :session_id, :event_data, CURRENT_TIMESTAMP)
+        """)
+        await db.execute(analytics_query, {
+            "event_type": "view",
+            "coach_id": coach_id,
+            "session_id": session_id,
+            "event_data": json.dumps({"source": "api"})
+        })
+        
         await db.commit()
+        
+        # Convert row to dict and create coach object for compatibility
+        coach_dict = dict(coach_row._mapping)
+        
+        # Parse JSON fields if they're stored as strings
+        if isinstance(coach_dict.get('features'), str):
+            try:
+                coach_dict['features'] = json.loads(coach_dict['features'])
+            except:
+                coach_dict['features'] = []
+        
+        if isinstance(coach_dict.get('images'), str):
+            try:
+                coach_dict['images'] = json.loads(coach_dict['images'])
+            except:
+                coach_dict['images'] = []
+        
+        # Create a simple object to mimic the ORM model
+        class CoachObj:
+            def __init__(self, **kwargs):
+                for k, v in kwargs.items():
+                    setattr(self, k, v)
+        
+        coach = CoachObj(**coach_dict)
         
         # Create response
         response = {

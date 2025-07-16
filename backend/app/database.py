@@ -43,16 +43,47 @@ else:
 
 # Create async engine only if we have async support
 try:
-    async_engine = create_async_engine(
-        ASYNC_DATABASE_URL,
-        echo=False
-    )
-    AsyncSessionLocal = sessionmaker(
-        bind=async_engine,
-        class_=AsyncSession,
-        autocommit=False,
-        autoflush=False
-    )
+    # Only create async engine if we have the necessary drivers
+    if "postgresql" in ASYNC_DATABASE_URL and "asyncpg" in ASYNC_DATABASE_URL:
+        try:
+            import asyncpg
+            async_engine = create_async_engine(
+                ASYNC_DATABASE_URL,
+                echo=False,
+                pool_pre_ping=True  # Test connections before using them
+            )
+            AsyncSessionLocal = sessionmaker(
+                bind=async_engine,
+                class_=AsyncSession,
+                autocommit=False,
+                autoflush=False,
+                expire_on_commit=False
+            )
+        except ImportError:
+            print("Warning: asyncpg not available, falling back to sync")
+            async_engine = None
+            AsyncSessionLocal = None
+    elif "sqlite" in ASYNC_DATABASE_URL and "aiosqlite" in ASYNC_DATABASE_URL:
+        try:
+            import aiosqlite
+            async_engine = create_async_engine(
+                ASYNC_DATABASE_URL,
+                echo=False
+            )
+            AsyncSessionLocal = sessionmaker(
+                bind=async_engine,
+                class_=AsyncSession,
+                autocommit=False,
+                autoflush=False,
+                expire_on_commit=False
+            )
+        except ImportError:
+            print("Warning: aiosqlite not available, falling back to sync")
+            async_engine = None
+            AsyncSessionLocal = None
+    else:
+        async_engine = None
+        AsyncSessionLocal = None
 except Exception as e:
     print(f"Warning: Could not create async engine: {e}")
     async_engine = None
@@ -154,9 +185,11 @@ async def get_db():
             finally:
                 await session.close()
     else:
-        # Fallback to sync session
+        # Fallback to sync session wrapped in a way that works with async
+        from sqlalchemy.orm import Session
         db = SessionLocal()
         try:
+            # Return the sync session - FastAPI will handle it
             yield db
         finally:
             db.close()
