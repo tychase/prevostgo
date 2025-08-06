@@ -42,17 +42,29 @@ async def get_coaches(
     # Build query
     query = select(Coach).where(Coach.status == "available")
     
-    # Apply text search if provided
+    # Apply text search if provided with enhanced fuzzy matching
     if search:
-        search_term = f"%{search}%"
-        query = query.where(
-            or_(
-                Coach.title.ilike(search_term),
-                Coach.model.ilike(search_term),
-                Coach.converter.ilike(search_term)
-                # Removed features search as it might cause issues with JSON column
+        # Split search terms for better matching
+        search_terms = search.lower().split()
+        search_conditions = []
+        
+        for term in search_terms:
+            term_pattern = f"%{term}%"
+            search_conditions.append(
+                or_(
+                    Coach.title.ilike(term_pattern),
+                    Coach.model.ilike(term_pattern),
+                    Coach.converter.ilike(term_pattern),
+                    Coach.chassis_type.ilike(term_pattern),
+                    Coach.dealer_name.ilike(term_pattern),
+                    Coach.dealer_state.ilike(term_pattern),
+                    Coach.stock_number.ilike(term_pattern)
+                )
             )
-        )
+        
+        # All search terms must match (AND condition between terms)
+        if search_conditions:
+            query = query.where(and_(*search_conditions))
     
     # Apply filters
     if price_min is not None:
@@ -90,9 +102,16 @@ async def get_coaches(
         )
     
     if converter:
-        # Use partial matching for converter in title field since converter field is empty
+        # Search for converter in multiple fields since converter field might be empty
         converter_term = f"%{converter}%"
-        query = query.where(Coach.title.ilike(converter_term))
+        query = query.where(
+            or_(
+                Coach.converter.ilike(converter_term),
+                Coach.title.ilike(converter_term),
+                # Also check if converter name appears in model field
+                Coach.model.ilike(converter_term)
+            )
+        )
         
     if slide_count is not None:
         query = query.where(Coach.slide_count == slide_count)

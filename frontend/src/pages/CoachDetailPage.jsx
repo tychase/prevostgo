@@ -157,7 +157,7 @@ export default function CoachDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Image Gallery */}
           <div className="lg:sticky lg:top-24 lg:self-start">
-            <ImageGallery images={coach.images || []} alt={coach.title} />
+            <ImageGallery images={coach.images?.length > 0 ? coach.images : ['/placeholder-coach.jpg']} alt={coach.title || 'Prevost Coach'} />
             
             {/* Virtual Tour Button */}
             {coach.virtual_tour_url && (
@@ -180,13 +180,13 @@ export default function CoachDetailPage() {
             {/* Header */}
             <div className="mb-8">
               <h1 className="text-3xl lg:text-4xl font-display font-bold text-gray-900 mb-4">
-                {coach.title || `${coach.year} ${coach.converter || ''} ${coach.model || ''}`.trim()}
+                {coach.title || `${coach.year || 'Year Unknown'} ${coach.converter || 'Prevost'} ${coach.model || 'Coach'}`.trim()}
               </h1>
               
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <p className="text-4xl font-bold text-primary-600">
-                    {formatPrice(coach.price) || coach.price_display || 'Contact for Price'}
+                    {coach.price ? formatPrice(coach.price) : (coach.price_display || 'Contact for Price')}
                   </p>
                   {coach.price && (
                     <p className="text-sm text-gray-500 mt-1">Plus taxes & fees</p>
@@ -217,9 +217,11 @@ export default function CoachDetailPage() {
                 <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
                   coach.condition === 'new' 
                     ? 'bg-green-100 text-green-800' 
-                    : 'bg-blue-100 text-blue-800'
+                    : coach.condition === 'used' || coach.condition === 'pre-owned'
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {coach.condition === 'new' ? 'Brand New' : 'Pre-Owned'}
+                  {coach.condition === 'new' ? 'Brand New' : coach.condition === 'used' || coach.condition === 'pre-owned' ? 'Pre-Owned' : coach.condition || 'Available'}
                 </span>
                 {coach.stock_number && (
                   <span className="text-sm text-gray-500">
@@ -237,7 +239,7 @@ export default function CoachDetailPage() {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Mileage</p>
                     <p className="text-lg font-semibold text-gray-900">
-                      {coach.mileage ? coach.mileage.toLocaleString() + ' miles' : 'Not specified'}
+                      {coach.mileage ? coach.mileage.toLocaleString() + ' miles' : 'Contact for Details'}
                     </p>
                   </div>
                 </div>
@@ -249,7 +251,7 @@ export default function CoachDetailPage() {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Slides</p>
                     <p className="text-lg font-semibold text-gray-900">
-                      {coach.slide_count || 0} {coach.slide_count === 1 ? 'Slide' : 'Slides'}
+                      {coach.slide_count !== null && coach.slide_count !== undefined ? `${coach.slide_count} ${coach.slide_count === 1 ? 'Slide' : 'Slides'}` : 'Not Specified'}
                     </p>
                   </div>
                 </div>
@@ -353,7 +355,7 @@ export default function CoachDetailPage() {
                     <span>{coach.dealer_state}</span>
                   </div>
                 )}
-                {coach.dealer_phone && (
+                {coach.dealer_phone ? (
                   <div>
                     <a
                       href={`tel:${coach.dealer_phone}`}
@@ -363,8 +365,13 @@ export default function CoachDetailPage() {
                       <span>{coach.dealer_phone}</span>
                     </a>
                   </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <PhoneIcon className="h-5 w-5" />
+                    <span>Contact for Phone</span>
+                  </div>
                 )}
-                {coach.dealer_email && (
+                {coach.dealer_email ? (
                   <div>
                     <a
                       href={`mailto:${coach.dealer_email}`}
@@ -373,6 +380,11 @@ export default function CoachDetailPage() {
                       <EnvelopeIcon className="h-5 w-5" />
                       <span>{coach.dealer_email}</span>
                     </a>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <EnvelopeIcon className="h-5 w-5" />
+                    <span>Request via Inquiry Form</span>
                   </div>
                 )}
               </div>

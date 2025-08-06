@@ -28,16 +28,20 @@ const CoachCard = ({ coach }) => {
                 onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/600x400/0a0a0a/333333?text=Image+Not+Found'; }}
             />
             <div className="absolute bottom-0 left-0 right-0 p-6 z-20 text-white">
-                <h3 className="text-xl font-bold leading-tight truncate">{coach.title}</h3>
+                <h3 className="text-xl font-bold leading-tight truncate">
+                    {coach.title || `${coach.year || ''} ${coach.converter || 'Prevost'} ${coach.model || ''}`.trim() || 'Prevost Coach'}
+                </h3>
                 <div className="flex justify-between items-end mt-2">
                     <div>
                         <p className="text-lg font-semibold text-amber-400">
                             {coach.price ? formatCurrency(coach.price) : coach.price_display || 'Contact for Price'}
                         </p>
-                        <p className="text-sm text-gray-400">{`${coach.year} • ${coach.converter}`}</p>
+                        <p className="text-sm text-gray-400">
+                            {coach.year || 'Year N/A'} • {coach.converter || coach.model || 'Details Available'}
+                        </p>
                     </div>
                     <div className="flex items-center space-x-2 text-sm text-gray-300">
-                        <span>{`${coach.slide_count || 0} Slides`}</span>
+                        <span>{coach.slide_count !== null && coach.slide_count !== undefined ? `${coach.slide_count} Slides` : 'Slides N/A'}</span>
                     </div>
                 </div>
             </div>
