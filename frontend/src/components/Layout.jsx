@@ -7,13 +7,18 @@ const Header = () => {
     const location = useLocation();
     
     const navLinks = [
-        { name: 'Home', path: '/' },
-        { name: 'Inventory', path: '/inventory' },
+        { name: 'Inventory', path: '/' },
         { name: 'About', path: '/about' },
         { name: 'Contact', path: '/contact' },
     ];
 
-    const isActive = (path) => location.pathname === path;
+    const isActive = (path) => {
+        // For inventory, check both / and /inventory paths
+        if (path === '/') {
+            return location.pathname === '/' || location.pathname === '/inventory';
+        }
+        return location.pathname === path;
+    };
 
     return (
         <header className="absolute top-0 left-0 right-0 z-50">
@@ -102,7 +107,7 @@ const Footer = () => {
                     <div>
                         <h4 className="font-semibold text-gray-200">Quick Links</h4>
                         <ul className="mt-4 space-y-2 text-sm">
-                            <li><Link to="/inventory" className="text-gray-400 hover:text-amber-400">Inventory</Link></li>
+                            <li><Link to="/" className="text-gray-400 hover:text-amber-400">Inventory</Link></li>
                             <li><Link to="/sell" className="text-gray-400 hover:text-amber-400">Sell Your Coach</Link></li>
                             <li><Link to="/financing" className="text-gray-400 hover:text-amber-400">Financing</Link></li>
                         </ul>

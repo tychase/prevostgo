@@ -1,6 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
-import HomePage from './pages/HomePage'
 import InventoryPage from './pages/InventoryPage'
 import CoachDetailPage from './pages/CoachDetailPage'
 import AboutPage from './pages/AboutPage'
@@ -18,7 +17,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
-        <Route index element={<HomePage />} />
+        <Route index element={<InventoryPage />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="inventory/:coachId" element={<CoachDetailPage />} />
         <Route path="about" element={<AboutPage />} />

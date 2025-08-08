@@ -84,8 +84,8 @@ export default function CoachDetailPage() {
       // Navigate back to the exact path including search params
       navigate(backPath);
     } else {
-      // Default to inventory page if no previous location
-      navigate('/inventory');
+      // Default to home/inventory page if no previous location
+      navigate('/');
     }
   };
 
