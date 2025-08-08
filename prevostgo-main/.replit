@@ -1,0 +1,21 @@
+entrypoint = "start.sh"
+modules = ["nodejs-20", "python-3.12", "web", "bash"]
+hidden = [".pythonlibs", "venv", ".npm", "node_modules"]
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["bash", "start.sh"]
+
+[[ports]]
+localPort = 3000
+externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
+
+[env]
+PYTHONPATH = "/home/runner/prevostgo/backend"
+PATH = "/home/runner/prevostgo/.pythonlibs/bin:/home/runner/prevostgo/venv/bin:$PATH"

@@ -1,0 +1,147 @@
+*** Begin Patch
+*** Add File: frontend/src/components/search/SearchBar.tsx
++import { useEffect, useMemo, useState } from "react";
++
++type Mode = "buy" | "sell";
++
++export type SearchFilters = {
++  query?: string;
++  condition?: "new" | "used";
++  converter?: string;
++  priceMin?: number | null;
++  priceMax?: number | null;
++  yearMin?: number | null;
++  yearMax?: number | null;
++  slides?: number | null;
++};
++
++export default function SearchBar({
++  onSearch
++}: {
++  onSearch: (opts: { mode: Mode; filters: SearchFilters }) => void;
++}) {
++  const [mode, setMode] = useState<Mode>("buy");
++  const [filters, setFilters] = useState<SearchFilters>({
++    query: "",
++    condition: "used",
++  });
++
++  // Debounced auto-search
++  useEffect(() => {
++    const t = setTimeout(() => onSearch({ mode, filters }), 350);
++    return () => clearTimeout(t);
++  }, [mode, filters]);
++
++  const placeholder = useMemo(
++    () =>
++      mode === "buy"
++        ? "Search make, model, converter…"
++        : "Describe your coach to sell/trade",
++    [mode]
++  );
++
++  return (
++    <div className="w-full max-w-5xl mx-auto">
++      {/* Tabs */}
++      <div className="flex gap-2 mb-3">
++        <button
++          className={`px-4 py-2 rounded-xl ${mode === "buy" ? "bg-white text-black" : "bg-slate-700"}`}
++          onClick={() => setMode("buy")}
++        >
++          Buy
++        </button>
++        <button
++          className={`px-4 py-2 rounded-xl ${mode === "sell" ? "bg-white text-black" : "bg-slate-700"}`}
++          onClick={() => setMode("sell")}
++        >
++          Sell/Trade
++        </button>
++      </div>
++
++      {/* Input row */}
++      <div className="flex gap-2 items-center">
++        <select
++          value={filters.condition}
++          onChange={(e) =>
++            setFilters((f) => ({ ...f, condition: e.target.value as any }))
++          }
++          className="px-3 py-2 rounded-lg bg-slate-800"
++        >
++          <option value="used">Used</option>
++          <option value="new">New</option>
++        </select>
++
++        <input
++          value={filters.query}
++          onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
++          placeholder={placeholder}
++          className="flex-1 px-4 py-2 rounded-lg bg-slate-800"
++          onKeyDown={(e) => {
++            if (e.key === "Enter") onSearch({ mode, filters });
++          }}
++        />
++      </div>
++
++      {/* Sticky Search button */}
++      <div className="fixed bottom-6 left-0 right-0 flex justify-center pointer-events-none z-50">
++        <button
++          className="pointer-events-auto px-6 py-3 rounded-full shadow-lg bg-indigo-600 font-semibold"
++          onClick={() => onSearch({ mode, filters })}
++        >
++          Search
++        </button>
++      </div>
++    </div>
++  );
++}
++
+*** End Patch
+
+*** Begin Patch
+*** Add File: frontend/src/components/listings/CoachCard.tsx
++type Specs = {
++  model?: string | null;
++  chassis_type?: string | null;
++  mileage?: number | null;
++  slide_count?: number | null;
++};
++
++export type Coach = {
++  id: string | number;
++  title: string;
++  heroImageUrl: string;
++  price: number | null;
++  price_contact?: boolean;
++  year?: number | null;
++  specs?: Specs;
++};
++
++export default function CoachCard({ coach }: { coach: Coach }) {
++  const model = coach.specs?.model ?? "—";
++  const chassis = coach.specs?.chassis_type ?? "—";
++  const mileage = coach.specs?.mileage;
++  const slides = coach.specs?.slide_count;
++
++  return (
++    <article className="rounded-2xl overflow-hidden bg-slate-900">
++      <img src={coach.heroImageUrl} className="w-full h-56 object-cover" alt="" />
++      <div className="p-4">
++        <h3 className="text-lg font-semibold line-clamp-2">{coach.title}</h3>
++        <div className="mt-1 text-amber-400 font-semibold">
++          {coach.price != null ? `$${coach.price.toLocaleString()}` : "Contact for Price"}
++        </div>
++        <div className="mt-2 text-sm opacity-80 flex gap-3">
++          <span>{coach.year ?? "—"}</span>
++          <span>• {model}</span>
++          <span>• Chassis: {chassis}</span>
++        </div>
++        <div className="mt-1 text-xs opacity-70 flex gap-3">
++          <span>{mileage != null ? `${mileage.toLocaleString()} mi` : "Mileage: —"}</span>
++          <span>{slides != null ? `${slides} Slide${slides===1?"":"s"}` : "Slides: —"}</span>
++        </div>
++      </div>
++    </article>
++  );
++}
++
+*** End Patch

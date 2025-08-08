@@ -1,0 +1,42 @@
+
+
+PostgreSQL init process complete; ready for start up.
+
+ 
+
+2025-07-09 18:19:06.676 UTC [3] LOG:  starting PostgreSQL 16.8 (Debian 16.8-1.pgdg120+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit
+
+2025-07-09 18:19:06.677 UTC [3] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+
+2025-07-09 18:19:06.677 UTC [3] LOG:  listening on IPv6 address "::", port 5432
+
+2025-07-09 18:19:06.815 UTC [3] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+
+2025-07-09 18:19:06.846 UTC [76] LOG:  database system was shut down at 2025-07-09 18:19:06 UTC
+
+2025-07-09 18:19:06.860 UTC [3] LOG:  database system is ready to accept connections
+
+2025-07-09 18:24:06.944 UTC [74] LOG:  checkpoint starting: time
+
+2025-07-09 18:24:11.254 UTC [74] LOG:  checkpoint complete: wrote 45 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=4.243 s, sync=0.018 s, total=4.311 s; sync files=12, longest=0.010 s, average=0.002 s; distance=260 kB, estimate=260 kB; lsn=0/1953520, redo lsn=0/19534E8
+
+Starting Container
+
+Traceback (most recent call last):
+
+  File "/app/main.py", line 14, in <module>
+
+    from app.routers import inventory, leads, search
+
+  File "/app/app/routers/inventory.py", line 10, in <module>
+
+    from app.models.database import get_db, Coach, Analytics
+
+  File "/app/app/models/database.py", line 17, in <module>
+
+    engine = create_async_engine(DATABASE_URL, echo=True)
+
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/opt/venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/engine.py", line 120, in create_async_engine
+

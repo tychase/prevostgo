@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Backend Connection</title>
+</head>
+<body>
+    <h1>Test Backend Connection</h1>
+    <button onclick="testConnection()">Test API Connection</button>
+    <div id="results"></div>
+
+    <script>
+        async function testConnection() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                // Test 1: Health endpoint
+                const healthResponse = await fetch('https://prevostgo-production.up.railway.app/api/health');
+                const healthData = await healthResponse.json();
+                resultsDiv.innerHTML += `<p>✅ Health check: ${JSON.stringify(healthData)}</p>`;
+                
+                // Test 2: Inventory endpoint
+                const inventoryResponse = await fetch('https://prevostgo-production.up.railway.app/api/inventory?per_page=1');
+                const inventoryData = await inventoryResponse.json();
+                resultsDiv.innerHTML += `<p>✅ Inventory endpoint: Found ${inventoryData.total} coaches</p>`;
+                
+                // Test 3: CORS headers
+                resultsDiv.innerHTML += `<p>CORS Headers from inventory:</p>`;
+                for (let [key, value] of inventoryResponse.headers) {
+                    if (key.toLowerCase().includes('access-control')) {
+                        resultsDiv.innerHTML += `<p> - ${key}: ${value}</p>`;
+                    }
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+                console.error('Full error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
