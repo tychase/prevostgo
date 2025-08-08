@@ -1,0 +1,108 @@
+2025-07-01 20:51:15.98
+429b89a3
+System
+error proxying request error=dial tcp 127.0.0.1:3000: connect: connection refused
+2025-07-01 20:51:16.15
+429b89a3
+User
+ERROR: Can not perform a '--user' install. User site-packages are not visible in this virtualenv.
+2025-07-01 20:51:16.81
+429b89a3
+User
+ERROR: Can not perform a '--user' install. User site-packages are not visible in this virtualenv.
+2025-07-01 20:51:17.29
+429b89a3
+System
+error proxying request error=dial tcp 127.0.0.1:3000: connect: connection refused
+2025-07-01 20:51:17.46
+429b89a3
+User
+INFO: Will watch for changes in these directories: ['/home/runner/workspace/backend']
+2025-07-01 20:51:17.46
+429b89a3
+User
+INFO: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-07-01 20:51:17.46
+429b89a3
+User
+INFO: Started reloader process [55] using WatchFiles
+2025-07-01 20:51:18.98
+429b89a3
+System
+error proxying request error=dial tcp 127.0.0.1:3000: connect: connection refused
+2025-07-01 20:51:19.60
+429b89a3
+System
+error proxying request error=dial tcp 127.0.0.1:3000: connect: connection refused
+2025-07-01 20:51:20.19
+429b89a3
+System
+error proxying request error=dial tcp 127.0.0.1:3000: connect: connection refused
+2025-07-01 20:51:20.89
+429b89a3
+User
+INFO: Started server process [62]
+2025-07-01 20:51:20.89
+429b89a3
+User
+INFO: Waiting for application startup.
+2025-07-01 20:51:20.90
+429b89a3
+User
+INFO: Application startup complete.
+2025-07-01 20:51:21.51
+429b89a3
+System
+error proxying request error=dial tcp 127.0.0.1:3000: connect: connection refused
+2025-07-01 20:51:22.42
+429b89a3
+System
+error proxying request error=dial tcp 127.0.0.1:3000: connect: connection refused
+2025-07-01 20:51:23.64
+429b89a3
+System
+error proxying request error=dial tcp 127.0.0.1:3000: connect: connection refused
+2025-07-01 20:51:23.73
+429b89a3
+User
+npm warn EBADENGINE Unsupported engine {
+2025-07-01 20:51:23.73
+429b89a3
+User
+npm warn EBADENGINE package: 'vite@7.0.0',
+2025-07-01 20:51:23.73
+429b89a3
+User
+npm warn EBADENGINE required: { node: '^20.19.0 || >=22.12.0' },
+2025-07-01 20:51:23.73
+429b89a3
+User
+npm warn EBADENGINE current: { node: 'v20.18.1', npm: '10.8.2' }
+2025-07-01 20:51:23.73
+429b89a3
+User
+npm warn EBADENGINE }
+2025-07-01 20:51:24.33
+429b89a3
+User
+npm notice
+2025-07-01 20:51:24.33
+429b89a3
+User
+npm notice New major version of npm available! 10.8.2 -> 11.4.2
+2025-07-01 20:51:24.33
+429b89a3
+User
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.4.2
+2025-07-01 20:51:24.33
+429b89a3
+User
+npm notice To update run: npm install -g npm@11.4.2
+2025-07-01 20:51:24.33
+429b89a3
+User
+npm notice
+2025-07-01 20:51:24.92
+429b89a3
+System
+error proxying request error=dial tcp 127.0.0.1:3000: connect: connection refused

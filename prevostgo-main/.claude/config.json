@@ -1,0 +1,19 @@
+{
+  "model": "claude-opus-4-1-20250805",
+  "temperature": 0.7,
+  "max_tokens": 4000,
+  "context_files": [
+    "claude.md",
+    "README.md",
+    "frontend/src/App.jsx",
+    "backend/main.py"
+  ],
+  "ignore_patterns": [
+    "node_modules/",
+    "venv/",
+    "__pycache__/",
+    "*.pyc",
+    "*.log",
+    ".env"
+  ]
+}

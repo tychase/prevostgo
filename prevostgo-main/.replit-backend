@@ -1,0 +1,16 @@
+modules = ["python-3.12"]
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+[[ports]]
+localPort = 8000
+externalPort = 80
+
+[env]
+PYTHONPATH = "${REPL_HOME}/backend"
+DATABASE_URL = "sqlite:///./prevostgo.db"
+CORS_ORIGINS = "*"
