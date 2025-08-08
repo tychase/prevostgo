@@ -1,0 +1,6 @@
+# Railway Backend Environment Variables
+# Add these to your Railway backend service
+
+CORS_ORIGINS=https://prevostgo.com,https://www.prevostgo.com,http://prevostgo.com,http://www.prevostgo.com,https://prevostgo-production.up.railway.app,http://localhost:3000,http://localhost:5173
+
+# This ensures all possible domains are allowed
